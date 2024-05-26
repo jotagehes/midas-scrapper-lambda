@@ -1,0 +1,58 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: An AWS Serverless trigger-based application
+
+Globals:
+  Function:
+    Timeout: 3
+    LoggingConfig:
+      LogFormat: JSON
+
+Resources:
+  MidasScrapperSQS:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: "MidasScrapperSQS.fifo"
+      FifoQueue: true
+
+  Subscriptions:
+    Type: AWS::SNS::Subscription
+    Properties:
+      Protocol: sqs
+      TopicArn: arn:aws:sns:us-east-1:381492147695:MidasScrapperSNS.fifo
+      Endpoint: !GetAtt MidasScrapperSQS.Arn
+
+  MidasScrapperSQSQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref MidasScrapperSQS
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: "*"
+            Action:
+              - sqs:SendMessage
+            Resource: !GetAtt MidasScrapperSQS.Arn
+            Condition:
+              ArnEquals:
+                aws:SourceArn: arn:aws:sns:us-east-1:381492147695:MidasScrapperSNS.fifo
+
+  MidasScrapperLambdaFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: hello-world/
+      Handler: app.lambdaHandler
+      Runtime: nodejs18.x
+      FunctionName: MidasScrapperLambdaFunction
+      Architectures:
+      - x86_64
+      Events:
+        SQSEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt MidasScrapperSQS.Arn
+
+
+
