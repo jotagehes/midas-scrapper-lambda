@@ -47,12 +47,17 @@ Resources:
       Runtime: nodejs18.x
       FunctionName: MidasScrapperLambdaFunction
       Architectures:
-      - x86_64
+        - x86_64
       Events:
         SQSEvent:
           Type: SQS
           Properties:
             Queue: !GetAtt MidasScrapperSQS.Arn
+      Policies:
+        - SNSPublishMessagePolicy:
+            TopicName: MidasSendScraperDataSNS.fifo
 
-
-
+Outputs:
+  LambdaFunctionArn:
+    Description: "ARN of the Lambda Function"
+    Value: !GetAtt MidasScrapperLambdaFunction.Arn
