@@ -1,7 +1,7 @@
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 
-export default async function srapper(url) {
+export default async function scraper(url) {
     try {
         const response = await axios.get(url);
         const $ = cheerio.load(response.data);
@@ -15,7 +15,8 @@ export default async function srapper(url) {
         // Extract company information
         const companyName = cleanText($('th.text-uppercase b').text());
         const cnpjText = cleanText($('td').filter((i, el) => $(el).text().includes('CNPJ')).text());
-        const [cnpj, stateRegistration] = cnpjText.split(', Inscrição Estadual:').map(cleanText);
+        const cnpj = cleanText(cnpjText.split('CNPJ:')[1].split(',')[0]);
+        const stateRegistration = cleanText(cnpjText.split('Inscrição Estadual:')[1]);
 
         // Extract address information
         const addressText = cleanText($('td[style*="italic"]').text());
