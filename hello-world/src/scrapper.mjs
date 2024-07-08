@@ -26,9 +26,55 @@ export default async function scraper(url) {
             number: cleanText(addressParts[1]),
             neighborhood: cleanText(addressParts[2]),
             zipCode: cleanText(addressParts[3].split(' ')[1]),
-            city: cleanText(addressParts[4].split('-')[0]),
-            state: cleanText(addressParts[4].split('-')[1])
+            city: cleanText(addressParts[3].split('-')[1]),
+            state: cleanText(addressParts[4].split('-')[0])
         };
+
+        if (address.zipCode) {
+            try {
+                const geoByCep = await axios.get(`https://cep.awesomeapi.com.br/json/${address.zipCode}`);
+                const geoByCepData = geoByCep.data;
+                address.latitude = geoByCepData.lat;
+                address.longitude = geoByCepData.lng;
+            } catch (geoError) {
+                try {
+                    function removePrefixes(text) {
+                        const prefixes = ["Av", "Av.", "Avenida", "Rua", "R.", "Rodovia"];
+                        let cleanedText = text;
+                        prefixes.forEach(prefix => {
+                            const regex = new RegExp(`^${prefix}\\s+`, 'i');
+                            cleanedText = cleanedText.replace(regex, '');
+                        });
+                        return cleanedText;
+                    };
+
+                    const street = removePrefixes(address.street);
+                    const geoByFullAddress = await axios.get(`https://viacep.com.br/ws/${address.state}/${address.city}/${street}/json`);
+                    const geoByFullAddressData = geoByFullAddress.data;
+
+                    if (!geoByFullAddressData || geoByFullAddressData.length === 0) {
+                        console.log('Via cep do not return any data.')
+                    }
+
+                    function findAddressByStreetAndNeighborhood(street, neighborhood) {
+                        return geoByFullAddressData.find(geo =>
+                            geo.logradouro.toLowerCase().includes(street.toLowerCase()) &&
+                            geo.bairro.toLowerCase().includes(neighborhood.toLowerCase()));
+                    }
+
+                    const findedAddress = findAddressByStreetAndNeighborhood(address.street, address.neighborhood) || geoByFullAddressData[0];
+
+                    const geoByCepWithFindedAddress = await axios.get(`https://cep.awesomeapi.com.br/json/${findedAddress.cep}`);
+                    const geoByCepDataWithFindedAddress = geoByCepWithFindedAddress.data;
+
+                    address.lat = geoByCepDataWithFindedAddress.lat;
+                    address.lng = geoByCepDataWithFindedAddress.lng;
+                    address.zipCode = findedAddress.cep;
+                } catch (geoError) {
+                    console.error(`Error fetching geolocation data: ${geoError}`);
+                }
+            }
+        }
 
         // Extract products
         const products = [];

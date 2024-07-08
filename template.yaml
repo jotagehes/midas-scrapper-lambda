@@ -4,7 +4,7 @@ Description: An AWS Serverless trigger-based application
 
 Globals:
   Function:
-    Timeout: 3
+    Timeout: 100
     LoggingConfig:
       LogFormat: JSON
 
