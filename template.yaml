@@ -50,7 +50,7 @@ Resources:
   MidasScrapperLambdaFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: hello-world/
+      CodeUri: scrapper/
       Handler: app.lambdaHandler
       Runtime: nodejs18.x
       FunctionName: MidasScrapperLambdaFunction
