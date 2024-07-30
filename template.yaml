@@ -1,4 +1,4 @@
-AWSTemplateFormatVersion: '2010-09-09'
+AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
 Description: An AWS Serverless trigger-based application
 
@@ -9,17 +9,25 @@ Globals:
       LogFormat: JSON
 
 Resources:
+  MidasScrapperSNS:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: "MidasScrapperSNS.fifo"
+      FifoTopic: true
+      ContentBasedDeduplication: true
+
   MidasScrapperSQS:
     Type: AWS::SQS::Queue
     Properties:
       QueueName: "MidasScrapperSQS.fifo"
       FifoQueue: true
+      VisibilityTimeout: 100 # Set the visibility timeout to at least 100 seconds
 
-  Subscriptions:
+  MidasScrapperSNSSubscription:
     Type: AWS::SNS::Subscription
     Properties:
       Protocol: sqs
-      TopicArn: arn:aws:sns:us-east-1:381492147695:MidasScrapperSNS.fifo
+      TopicArn: !Ref MidasScrapperSNS
       Endpoint: !GetAtt MidasScrapperSQS.Arn
 
   MidasScrapperSQSQueuePolicy:
@@ -28,7 +36,7 @@ Resources:
       Queues:
         - !Ref MidasScrapperSQS
       PolicyDocument:
-        Version: '2012-10-17'
+        Version: "2012-10-17"
         Statement:
           - Effect: Allow
             Principal: "*"
@@ -37,7 +45,7 @@ Resources:
             Resource: !GetAtt MidasScrapperSQS.Arn
             Condition:
               ArnEquals:
-                aws:SourceArn: arn:aws:sns:us-east-1:381492147695:MidasScrapperSNS.fifo
+                aws:SourceArn: !Ref MidasScrapperSNS
 
   MidasScrapperLambdaFunction:
     Type: AWS::Serverless::Function
@@ -55,7 +63,7 @@ Resources:
             Queue: !GetAtt MidasScrapperSQS.Arn
       Policies:
         - SNSPublishMessagePolicy:
-            TopicName: MidasSendScraperDataSNS.fifo
+            TopicName: MidasScrapperSNS.fifo
 
 Outputs:
   LambdaFunctionArn:
